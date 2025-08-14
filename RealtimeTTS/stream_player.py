@@ -15,7 +15,6 @@ Key Components:
 
 Designed for flexible, real-time audio playback and streaming, with error handling for unsupported configurations.
 """
-from pydub import AudioSegment
 try:
     import pyaudio._portaudio as pa
 except ImportError:
@@ -478,14 +477,8 @@ class StreamPlayer:
             print(f"Error sending audio data to mpv: {e}")
 
     def _play_wav_chunk(self, chunk):
-        if self.audio_stream.config.format == pyaudio.paCustomFormat:
-            segment = AudioSegment.from_file(io.BytesIO(chunk), format="mp3")
-            chunk = segment.raw_data
-            sample_width = segment.sample_width
-            channels = segment.channels
-        else:
-            sample_width = self.audio_stream.pyaudio_instance.get_sample_size(self.audio_stream.config.format)
-            channels = self.audio_stream.config.channels
+        sample_width = self.audio_stream.pyaudio_instance.get_sample_size(self.audio_stream.config.format)
+        channels = self.audio_stream.config.channels
 
         if self.audio_stream.config.rate != self.audio_stream.actual_sample_rate and self.audio_stream.actual_sample_rate > 0:
             if self.audio_stream.config.format == pyaudio.paFloat32:

@@ -387,3 +387,12 @@ class AzureEngine(BaseEngine):
             self.rate = voice_parameters["rate"]
         if "pitch" in voice_parameters:
             self.pitch = voice_parameters["pitch"]
+
+    def set_speed(self, speed: float):
+        """
+        Sets the speaking speed of the engine.
+
+        Args:
+            speed (float): The speaking speed, as a multiplier of the default speed.
+        """
+        self.rate = (speed - 1.0) * 100

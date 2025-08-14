@@ -160,3 +160,12 @@ class OpenAIEngine(BaseEngine):
             **voice_parameters: The voice parameters to be used for speech synthesis.
         """
         pass
+
+    def set_speed(self, speed: float):
+        """
+        Sets the speaking speed of the engine.
+
+        Args:
+            speed (float): The speaking speed, as a multiplier of the default speed.
+        """
+        self.speed = speed

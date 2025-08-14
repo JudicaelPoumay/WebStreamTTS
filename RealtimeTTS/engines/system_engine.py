@@ -129,3 +129,12 @@ class SystemEngine(BaseEngine):
         """
         for parameter, value in voice_parameters.items():
             self.engine.setProperty(parameter, value)
+
+    def set_speed(self, speed: float):
+        """
+        Sets the speaking speed of the engine.
+
+        Args:
+            speed (float): The speaking speed, as a multiplier of the default speed.
+        """
+        self.engine.setProperty("rate", 200 * speed)
