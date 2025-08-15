@@ -20,6 +20,8 @@ from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, Query, Request
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from markdownify import markdownify as md
 
 from queue import Queue
 import threading
@@ -28,6 +30,7 @@ import uvicorn
 import wave
 import io
 import os
+import re
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -86,10 +89,6 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-@app.get("/favicon.ico")
-async def favicon():
-    return FileResponse("static/favicon.ico")
-
 def create_wave_header_for_engine(engine):
     _, _, sample_rate = engine.get_stream_info()
 
@@ -114,26 +113,52 @@ def create_wave_header_for_engine(engine):
     return final_wave_header.getvalue()
 
 
+current_request_handler = None
+
+
 @app.get("/tts")
 async def tts(request: Request, text: str = Query(...), speed: float = Query(1.0)):
+    global current_request_handler
     with tts_lock:
         engine.set_speed(speed)
-        request_handler = TTSRequestHandler(engine)
+        current_request_handler = TTSRequestHandler(engine)
 
         if play_text_to_speech_semaphore.acquire(blocking=False):
             try:
+                # Remove markdown links, keeping only the link text
+                processed_text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)
+
                 threading.Thread(
-                    target=request_handler.play_text_to_speech,
-                    args=(text,),
+                    target=current_request_handler.play_text_to_speech,
+                    args=(processed_text,),
                     daemon=True,
                 ).start()
             finally:
                 play_text_to_speech_semaphore.release()
 
         return StreamingResponse(
-            request_handler.audio_chunk_generator(True),
+            current_request_handler.audio_chunk_generator(True),
             media_type="audio/wav",
         )
+
+
+@app.post("/stop")
+async def stop_tts():
+    global current_request_handler
+    if current_request_handler and current_request_handler.speaking:
+        current_request_handler.stream.stop()
+        current_request_handler.speaking = False
+        return {"status": "stopped"}
+    return {"status": "not speaking"}
+
+
+class HTMLContent(BaseModel):
+    html: str
+
+@app.post("/html_to_markdown")
+async def html_to_markdown(content: HTMLContent):
+    markdown = md(content.html, heading_style="ATX")
+    return {"markdown": markdown}
 
 
 @app.get("/")
