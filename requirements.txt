@@ -10,3 +10,5 @@ python-dotenv
 html2text
 nltk
 markdownify
+beautifulsoup4
+lxml
